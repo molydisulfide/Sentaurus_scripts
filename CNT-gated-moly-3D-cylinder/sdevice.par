@@ -1,0 +1,18 @@
+#define ParFileDir .
+
+Material="Gold" {
+  #includeext "ParFileDir/MaterialDB/Gold.par"
+}
+Material="Moly" {
+  #includeext "ParFileDir/MaterialDB/moly.par"
+}
+Material="SiO2" {
+  #includeext "ParFileDir/MaterialDB/Oxide.par"
+}
+Material="Silicon" {
+  #includeext "ParFileDir/MaterialDB/Silicon.par"
+}
+Material="CNT" {
+  #includeext "ParFileDir/MaterialDB/CNT.par"
+}
+
