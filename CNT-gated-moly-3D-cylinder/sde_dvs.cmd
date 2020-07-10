@@ -2,26 +2,45 @@
 (define nm 1e-3)
 (define CNT_r @CNT_r@) ; set CNT radius as variable in simulation
 (define CNT_d (+ CNT_r CNT_r))
-(define height (+ CNT_d 0.7))
+(define CNT_shell 0.25)
+(define height (+ CNT_d 0.7 (* 2 CNT_shell)))
 (define top_g (+ height 10))
 (define C_doping 1e18)
 (define S_doping 1e18)
 (define D_doping 1e18)
 (define CNT_doping 1e20)
+(define lead_doping 3e19)
+
 
 # ----------Draw Structure----------
-(sdegeo:create-cuboid (position 0 0 0) (position 40 40 0.7) "Moly" "Channel" ) ; MoS2 Channel
+(sdegeo:create-cuboid (position 0 0 -0.25) (position 40 40 0.45) "Moly" "Channel" ) ; MoS2 Channel
 
-(sdegeo:create-cuboid (position -20 -20 0) (position 60 60 -10) "SiO2" "Substrate") ; SiO2 substrate
+(sdegeo:create-cuboid (position -20 -20 -0.25) (position 60 60 -10) "SiO2" "Substrate") ; SiO2 substrate
 
-(sdegeo:create-cylinder (position 20 0 (+ 0.7 CNT_r)) (position 20 40 (+ 0.7 CNT_r)) CNT_r "CNT" "Nanotube") ; CNT gate
+(sdegeo:create-cylinder (position 20 0 (+ 0.7 CNT_r)) (position 20 40 (+ 0.7 CNT_r)) CNT_r "Silicon" "Core") ; CNT core
+
+(sdegeo:set-default-boolean "BAB")
+
+(sdegeo:create-cylinder (position 20 0 (+ 0.7 CNT_r)) (position 20 40 (+ 0.7 CNT_r)) (+ CNT_r CNT_shell) "CNT" "Nanotube") ; CNT shell
+
+(sdegeo:create-cylinder (position 20 40 (+ 0.7 CNT_r)) (position 20 50 (+ 0.7 CNT_r)) (- CNT_r 0.5) "Silicon" "HighLead") ; HIGH lead sticking out of CNT core
+(sdegeo:create-cuboid (position 10 47 1) (position 30 53 5) "Silicon" "HighPad") ; HIGH pad
+
+(sdegeo:create-cylinder (position 20 0 (+ 0.7 CNT_r)) (position 20 -10 (+ 0.7 CNT_r)) (- CNT_r 0.5) "Silicon" "LowLead") ; LOW lead sticking out of CNT core
+(sdegeo:create-cuboid (position 10 -7 1) (position 30 -13 5) "Silicon" "LowPad") ; LOW pad
 
 (sdegeo:create-cuboid (position 0 0 0.0) (position 10 40 0.7) "Moly" "Source") ; MoS2 source region
 (sdegeo:create-cuboid (position 30 0 0.0) (position 40 40 0.7) "Moly" "Drain") ; MoS2 drain region
 
-(sdegeo:create-cuboid (position (- 20 CNT_r) 0 (- height 0.25)) (position (+ 20 CNT_r) 40 (+ height 0.25)) "CNT" "Gate") ;CNT gating spacer
+(sdegeo:create-cuboid (position (- 20 CNT_r) 0 (- height 0.25)) (position (+ 20 CNT_r) 40 (+ height 0.25)) "CNT" "Gate") ; CNT gating spacer
+
+(sdegeo:create-cuboid (position 10 -7 0.0) (position 30 -13 1) "SiO2" "LowSpacer") ; dielectric low pad spacer
+(sdegeo:create-cuboid (position 10 47 0.0) (position 30 53 1) "SiO2" "LowSpacer") ; dielectric low pad spacer
 
 # ----------Set Contacts----------
+
+# Moly JFET contacts 
+
 (sdegeo:define-contact-set "S" 4.0 (color:rgb 1.0 0.0 0.0 ) "##" )
 (sdegeo:set-current-contact-set "S")
 (sdegeo:define-3d-contact(list(car(find-face-id (position 5 35 0.7 ))))"S")
@@ -32,13 +51,23 @@
 (sdegeo:set-current-contact-set "G")
 (sdegeo:define-3d-contact(list(car(find-face-id (position 20 35 (+ height 0.25) ))))"G")
 
+# Ionic Current Contacts
+
+(sdegeo:define-contact-set "S" 4.0 (color:rgb 1.0 0.0 0.0 ) "##" )
+(sdegeo:set-current-contact-set "S")
+(sdegeo:define-3d-contact(list(car(find-face-id (position 20 -10 5.0 ))))"IS")
+
+(sdegeo:define-contact-set "D" 4.0 (color:rgb 1.0 0.0 0.0 ) "##" )
+(sdegeo:set-current-contact-set "D")
+(sdegeo:define-3d-contact(list(car(find-face-id (position 20 50 5.0 ))))"ID")
+
 #(set-interface-contact "TopSiO2" "nImplant" "bias1")
 #(set-interface-contact "TopSiO2" "nImplant1" "bias2")
 
 ;-----DOPING------;
 
 ;--- Channel ---
-(sdedr:define-constant-profile "dopedC" "PhosphorusActiveConcentration" C_doping )
+(sdedr:define-constant-profile "dopedC" "BoronActiveConcentration" C_doping )
 (sdedr:define-constant-profile-region "RegionC" "dopedC" "Channel" )
 
 ;--- Source ---
@@ -50,22 +79,42 @@
 (sdedr:define-constant-profile-region "RegionD" "dopedD" "Drain" )
 
 ;--- Gate ---
-(sdedr:define-constant-profile "dopedGt" "BoronActiveConcentration" CNT_doping )
+(sdedr:define-constant-profile "dopedGt" "PhosphorusActiveConcentration" CNT_doping )
 (sdedr:define-constant-profile-region "RegionGt" "dopedGt" "Gate" )
 
-;--- Nanotube ---
-(sdedr:define-constant-profile "dopedNT" "BoronActiveConcentration" CNT_doping )
+;--- CNT Shell ---
+(sdedr:define-constant-profile "dopedNT" "PhosphorusActiveConcentration" CNT_doping )
 (sdedr:define-constant-profile-region "RegionNT" "dopedNT" "Nanotube" )
+
+;--- CNT Core ---
+(sdedr:define-constant-profile "dopedC" "BoronActiveConcentration" lead_doping )
+(sdedr:define-constant-profile-region "RegionCore" "dopedC" "Core" )
+
+;--- High Lead ---
+(sdedr:define-constant-profile "dopedC" "BoronActiveConcentration" lead_doping )
+(sdedr:define-constant-profile-region "RegionHL" "dopedC" "HighLead" )
+
+;--- Low Lead ---
+(sdedr:define-constant-profile "dopedC" "BoronActiveConcentration" lead_doping )
+(sdedr:define-constant-profile-region "RegionLL" "dopedC" "LowLead" )
+
+;--- High Pad ---
+(sdedr:define-constant-profile "dopedC" "BoronActiveConcentration" lead_doping )
+(sdedr:define-constant-profile-region "RegionHP" "dopedC" "HighPad" )
+
+;--- Low Pad ---
+(sdedr:define-constant-profile "dopedC" "BoronActiveConcentration" lead_doping )
+(sdedr:define-constant-profile-region "RegionLP" "dopedC" "LowPad" )
 
 ;----- MESHING------;
 
-(sdedr:define-refeval-window "RefEvalWin_1" "Cuboid"  (position 0.05 0.05 0.05)  (position 2 2 2) )
+(sdedr:define-refeval-window "RefEvalWin_1" "Cuboid"  (position -50 -50 -50)  (position 80 80 80) )
 
 (sdedr:define-refinement-size "RefinementDefinition_1"   )
 
 (sdedr:define-refinement-placement "RefinementPlacement_1" "RefinementDefinition_1" (list "window" "RefEvalWin_1" ) )
 
-(sdedr:define-refinement-function "RefinementDefinition_1" "MaxLenInt" "Moly" "CNT" 0.008 1.4)
+(sdedr:define-refinement-function "RefinementDefinition_1" "MaxLenInt" "Moly" "CNT" 0.008 0.008 0.008)
 
 
 ;----- (6). Save (BND and CMD and rescale to nm) -----;
